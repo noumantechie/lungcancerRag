@@ -1,2 +1,6 @@
-Pandas 
-Numpy 
+scikit-learn
+sentence-transformers
+groq
+streamlit
+pandas
+numpy
