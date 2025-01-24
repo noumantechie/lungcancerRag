@@ -6,13 +6,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 import streamlit as st
+import csv
+
 
 # Set up Groq API
 client = Groq(api_key="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")
 
 # Load the dataset
-dataset_path = '/content/dataseter.csv'  # Ensure this file is uploaded
-df = pd.read_csv("/content/dataseter.csv")
+dataset_path = 'dataseter.csv'  # Ensure this file is uploaded
+df = pd.read_csv("dataset_path")
 
 # Preview the dataset
 st.write("Dataset preview:", df.head())
