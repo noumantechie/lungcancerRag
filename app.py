@@ -13,7 +13,7 @@ import csv
 client = Groq(api_key="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")
 
 # Load the dataset
-dataset_path = 'lungcancerRag/dataseter.csv  # Ensure this file is uploaded
+dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/main/dataseter.csv'  # Ensure this file is uploaded
 df = pd.read_csv(dataset_path)
 
 # Preview the dataset
