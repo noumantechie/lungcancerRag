@@ -12,7 +12,7 @@ client = Groq(api_key="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"
 
 # Load the dataset
 dataset_path = '/content/dataseter.csv'  # Ensure this file is uploaded
-df = pd.read_csv(dataset_path)
+df = pd.read_csv("/content/dataseter.csv")
 
 # Preview the dataset
 st.write("Dataset preview:", df.head())
