@@ -79,4 +79,4 @@ License
 This project is licensed under the MIT License.
 
 Contact
-For questions or inquiries, please contact the repository owner at [your-email@example.com].
+For questions or inquiries, please contact the repository owner at nomanyousaf@gmail.com.
