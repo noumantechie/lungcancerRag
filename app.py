@@ -8,8 +8,12 @@ from groq import Groq
 import streamlit as st
 import csv
 
-# Access Groq API key securely from secrets
-secrets = st.secrets["groq_api_key"]
+try:
+    api_key = st.secrets["groq_api_key"]
+    st.write("API Key loaded successfully.")
+except KeyError:
+    st.error("API Key not found in secrets. Please check the Streamlit Secrets configuration.")
+
 
 # Set up Groq API with the secret key
 client = Groq(api_key=secrets)
