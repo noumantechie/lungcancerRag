@@ -17,7 +17,7 @@ dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/mai
 df = pd.read_csv(dataset_path)
 
 # Preview the dataset
-st.write("Dataset preview:", df.head())
+#st.write("Dataset preview:", df.head())
 
 # Prepare embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')  # Open-source embedding model
