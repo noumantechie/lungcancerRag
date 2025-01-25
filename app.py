@@ -8,9 +8,11 @@ from groq import Groq
 import streamlit as st
 import csv
 
+# Access Groq API key securely from secrets
+secrets = st.secrets["groq_api_key"]
 
-# Set up Groq API
-client = Groq(api_key="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")
+# Set up Groq API with the secret key
+client = Groq(api_key=secrets)
 
 # Load the dataset
 dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/main/dataseter.csv'  # Ensure this file is uploaded
