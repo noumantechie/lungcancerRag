@@ -16,7 +16,7 @@ except KeyError:
 
 
 # Set up Groq API with the secret key
-client = Groq(api_key=secrets)
+client = Groq(api_key= api_key)
 
 # Load the dataset
 dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/main/dataseter.csv'  # Ensure this file is uploaded
