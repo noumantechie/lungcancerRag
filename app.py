@@ -20,7 +20,7 @@ else:
 client = Groq(api_key=secrets)
 
 # Load the dataset
-dataset_path = 'https://raw.githubusercontent.com/noumantechie/RagApplication/main/lungcaner/dataseter.csv'
+dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/main/dataseter.csv'
 try:
     df = pd.read_csv(dataset_path)
 except Exception as e:
@@ -28,15 +28,11 @@ except Exception as e:
     st.write("Please check if the dataset URL is correct or reachable.")
     st.stop()
 
-# Check the columns of the dataframe to ensure the correct ones exist
-#st.write("Dataset Columns:", df.columns)
-
 # Prepare embeddings (caching embeddings to avoid recomputation)
 model = SentenceTransformer('all-MiniLM-L6-v2')  # Open-source embedding model
 
 @st.cache_data
 def compute_embeddings(df, exclude_columns=[]):
-    # Convert dataset rows to embeddings
     def row_to_text(row):
         return " ".join(f"{col}: {val}" for col, val in row.items() if col not in exclude_columns)
 
@@ -82,17 +78,14 @@ def call_groq_api(input_to_groq, retries=3):
 
 # RAG Functionality
 def rag_pipeline(query):
-    # Step 1: Retrieve relevant rows
     retrieved_rows = retrieve_relevant_rows(query, top_n=3)
 
     if retrieved_rows is None or retrieved_rows.empty:
         return "No relevant data found for the query. Please ensure your query is related to lung cancer or the dataset."
 
-    # Step 2: Combine retrieved data for the Groq model
     retrieved_text = " ".join(retrieved_rows['text'].tolist())
     input_to_groq = f"Context: {retrieved_text} \nQuestion: {query}"
 
-    # Step 3: Use Groq for text generation
     response_content = call_groq_api(input_to_groq)
     if response_content:
         return response_content
@@ -101,16 +94,36 @@ def rag_pipeline(query):
 
 # Streamlit interface
 st.title("Medical Query Answering System")
-st.write("Enter a query below and get a detailed response based on the dataset.")
+st.write("Enter a query below to get a detailed response based on the dataset.")
 
-# User input query
-query = st.text_input("Your Query", "")
+# User input query with placeholder text
+query = st.text_input("Your Query", placeholder="E.g., What are the symptoms of lung cancer?")
 
-# Handle user input and show results
-if query:
-    if len(query.strip()) > 3:
-        with st.spinner('Generating response...'):
-            response = rag_pipeline(query)
-        st.write("Response:", response)
+# Add a button to execute the query
+if st.button("Get Response"):
+    if query.strip():
+        if len(query.strip()) > 3:
+            with st.spinner('Generating response...'):
+                response = rag_pipeline(query)
+            st.write("### Response")
+            st.write(response)
+        else:
+            st.warning("Please enter a longer query.")
     else:
-        st.warning("Please enter a longer query.")
+        st.warning("The query field is empty. Please enter a query to proceed.")
+
+# Style the interface
+st.markdown("""
+    <style>
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        font-size: 16px;
+        padding: 10px 20px;
+        border-radius: 8px;
+    }
+    .stButton>button:hover {
+        background-color: #45a049;
+    }
+    </style>
+""", unsafe_allow_html=True)
