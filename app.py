@@ -8,18 +8,22 @@ from groq import Groq
 import streamlit as st
 import csv
 
-# Set up Groq API
 try:
-    secrets = st.secrets["groq_api_key"]
+    secrets  = st.secrets["groq_api_key"]
+    st.write("API Key loaded successfully.")
 except KeyError:
     st.error("API Key not found in secrets. Please check the Streamlit Secrets configuration.")
 
+
 # Set up Groq API with the secret key
-client = Groq(api_key=secrets)
+client = Groq(api_key=secrets )
 
 # Load the dataset
-dataset_path = 'https://raw.githubusercontent.com/noumantechie/RagApplication/main/lungcaner/dataseter.csv'  # Ensure this file is uploaded
+dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/main/dataseter.csv'  # Ensure this file is uploaded
 df = pd.read_csv(dataset_path)
+
+# Preview the dataset
+#st.write("Dataset preview:", df.head())
 
 # Prepare embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')  # Open-source embedding model
@@ -29,24 +33,18 @@ def row_to_text(row):
     return " ".join(f"{col}: {val}" for col, val in row.items())
 
 df['text'] = df.apply(row_to_text, axis=1)
-embeddings = np.vstack(df['text'].apply(lambda x: model.encode(x)).to_numpy())
+df['embedding'] = df['text'].apply(lambda x: model.encode(x))
 
 # Define retrieval function
 def retrieve_relevant_rows(query, top_n=3):
     query_embedding = model.encode(query)
+    embeddings = np.vstack(df['embedding'].to_numpy())
     similarities = cosine_similarity([query_embedding], embeddings).flatten()
     top_indices = similarities.argsort()[-top_n:][::-1]
     return df.iloc[top_indices]
 
-# In-memory cache for query-response pairs
-query_cache = {}
-
 # RAG Functionality
 def rag_pipeline(query):
-    # Check if the query is already in the cache
-    if query in query_cache:
-        return query_cache[query]
-    
     # Step 1: Retrieve relevant rows
     retrieved_rows = retrieve_relevant_rows(query, top_n=3)
 
@@ -56,24 +54,19 @@ def rag_pipeline(query):
 
     # Step 3: Use Groq for text generation
     chat_completion = client.chat.completions.create(
-        messages=[{
-            "role": "system",
-            "content": "You are an expert in analyzing medical data related to lung cancer.",
-        },
-        {
-            "role": "user",
-            "content": input_to_groq,
-        }],
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an expert in analyzing medical data related to lung cancer.",
+            },
+            {
+                "role": "user",
+                "content": input_to_groq,
+            }
+        ],
         model="llama3-8b-8192",  # Use Groq's Llama model
     )
-
-    # Get the response
-    response = chat_completion.choices[0].message.content
-
-    # Store the query and response in the cache
-    query_cache[query] = response
-
-    return response
+    return chat_completion.choices[0].message.content
 
 # Streamlit interface
 st.title("Medical Query Answering System")
