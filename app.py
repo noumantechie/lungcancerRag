@@ -18,7 +18,7 @@ except KeyError:
 client = Groq(api_key=api_key)
 
 # Load the dataset (ensure the file exists at the given path or provide an online link)
-dataset_path = 'https://raw.githubusercontent.com/noumantechie/RagApplication/main/lungcaner/dataseter.csv'
+dataset_path = 'dataseter.csv'
 df = pd.read_csv(dataset_path)
 
 # Preprocess the dataset
