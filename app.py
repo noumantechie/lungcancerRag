@@ -6,76 +6,66 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 import streamlit as st
-import csv
 
+# Set up Groq API
 try:
-    secrets  = st.secrets["groq_api_key"]
-    st.write("API Key loaded successfully.")
+    api_key = st.secrets["groq_api_key"]
 except KeyError:
     st.error("API Key not found in secrets. Please check the Streamlit Secrets configuration.")
+    st.stop()
 
+# Initialize the Groq API client
+client = Groq(api_key=api_key)
 
-# Set up Groq API with the secret key
-client = Groq(api_key=secrets )
-
-# Load the dataset
-dataset_path = 'https://raw.githubusercontent.com/noumantechie/lungcancerRag/main/dataseter.csv'  # Ensure this file is uploaded
+# Load the dataset (ensure the file exists at the given path or provide an online link)
+dataset_path = 'https://raw.githubusercontent.com/noumantechie/RagApplication/main/lungcaner/dataseter.csv'
 df = pd.read_csv(dataset_path)
 
-# Preview the dataset
-#st.write("Dataset preview:", df.head())
+# Preprocess the dataset
+df.fillna("", inplace=True)  # Fill missing values
+df['combined'] = df.astype(str).apply(' '.join, axis=1)  # Combine all columns into a single string
 
-# Prepare embeddings
-model = SentenceTransformer('all-MiniLM-L6-v2')  # Open-source embedding model
+# Initialize the SentenceTransformer model once
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# Convert dataset rows to embeddings
-def row_to_text(row):
-    return " ".join(f"{col}: {val}" for col, val in row.items())
+# Generate embeddings for the dataset (only once)
+embeddings = model.encode(df['combined'].tolist())
+vector_database = np.array(embeddings)
 
-df['text'] = df.apply(row_to_text, axis=1)
-df['embedding'] = df['text'].apply(lambda x: model.encode(x))
-
-# Define retrieval function
+# Define a function to retrieve the most similar rows
 def retrieve_relevant_rows(query, top_n=3):
-    query_embedding = model.encode(query)
-    embeddings = np.vstack(df['embedding'].to_numpy())
-    similarities = cosine_similarity([query_embedding], embeddings).flatten()
-    top_indices = similarities.argsort()[-top_n:][::-1]
-    return df.iloc[top_indices]
+    query_embedding = model.encode([query])  # Generate embedding for the query
+    similarities = cosine_similarity(query_embedding, vector_database)  # Compute similarities
+    top_indices = np.argsort(similarities[0])[::-1][:top_n]  # Get top_n indices
+    return df.iloc[top_indices], top_indices
 
-# RAG Functionality
+# Define the RAG pipeline
 def rag_pipeline(query):
-    # Step 1: Retrieve relevant rows
-    retrieved_rows = retrieve_relevant_rows(query, top_n=3)
+    # Retrieve relevant rows
+    retrieved_rows, _ = retrieve_relevant_rows(query, top_n=3)
 
-    # Step 2: Combine retrieved data for the Groq model
-    retrieved_text = " ".join(retrieved_rows['text'].tolist())
+    # Combine retrieved data into a single context
+    retrieved_text = " ".join(retrieved_rows['combined'].tolist())
     input_to_groq = f"Context: {retrieved_text} \nQuestion: {query}"
 
-    # Step 3: Use Groq for text generation
+    # Generate a response using the Groq API
     chat_completion = client.chat.completions.create(
         messages=[
-            {
-                "role": "system",
-                "content": "You are an expert in analyzing medical data related to lung cancer.",
-            },
-            {
-                "role": "user",
-                "content": input_to_groq,
-            }
+            {"role": "system", "content": "You are an expert in analyzing medical data related to lung cancer."},
+            {"role": "user", "content": input_to_groq},
         ],
-        model="llama3-8b-8192",  # Use Groq's Llama model
+        model="llama3-8b-8192",
     )
     return chat_completion.choices[0].message.content
 
 # Streamlit interface
-st.title("Medical Query Answering System")
-st.write("Enter a query below and get a detailed response based on the dataset.")
+st.title("Lung Cancer Predictor App")
 
 # User input query
-query = st.text_input("Your Query", "")
+query = st.text_input("Enter your query:")
 
-# Handle user input and show results
-if query:
-    response = rag_pipeline(query)
+# Handle user input and display results
+if st.button("Get Prediction") and query:
+    with st.spinner("Processing your query..."):
+        response = rag_pipeline(query)
     st.write("Response:", response)
