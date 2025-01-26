@@ -25,18 +25,20 @@ try:
     df = pd.read_csv(dataset_path)
 except Exception as e:
     st.error(f"Error loading dataset: {e}")
-    st.write("Please check if the dataset URL is correct or reachable.")
     st.stop()
+
+# Ensure 'text' column exists or create it
+if "text" not in df.columns:
+    def row_to_text(row):
+        return " ".join(f"{col}: {val}" for col, val in row.items())
+
+    df['text'] = df.apply(row_to_text, axis=1)
 
 # Prepare embeddings (caching embeddings to avoid recomputation)
 model = SentenceTransformer('all-MiniLM-L6-v2')  # Open-source embedding model
 
 @st.cache_data
-def compute_embeddings(df, exclude_columns=[]):
-    def row_to_text(row):
-        return " ".join(f"{col}: {val}" for col, val in row.items() if col not in exclude_columns)
-
-    df['text'] = df.apply(row_to_text, axis=1)
+def compute_embeddings(df):
     texts = df['text'].tolist()
     embeddings = np.array([model.encode(text) for text in tqdm(texts, desc="Generating Embeddings")])
     return embeddings
@@ -58,14 +60,16 @@ def call_groq_api(input_to_groq, retries=3):
     for attempt in range(retries):
         try:
             chat_completion = client.chat.completions.create(
-                messages=[{
-                    "role": "system",
-                    "content": "You are an expert in analyzing medical data related to lung cancer. Reject any unrelated queries and inform the user.",
-                },
-                {
-                    "role": "user",
-                    "content": input_to_groq,
-                }],
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert in analyzing medical data related to lung cancer. Reject any unrelated queries and inform the user.",
+                    },
+                    {
+                        "role": "user",
+                        "content": input_to_groq,
+                    }
+                ],
                 model="llama3-8b-8192",
             )
             return chat_completion.choices[0].message.content
